@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+{% block title %}Movie Search{% endblock %}
+
+{% block content %}
+
+<div class="container mx-auto">
+
+    {% if authenticated %}
+    <div class="movies-info flex flex-col items-center">
+        <div class="movies-info movie flex flex-row mb-4 my-12 bg-white bg-opacity-20 backdrop-blur-md shadow-md p-4">
+            {% if movie %}
+            <div class="w-1/3">
+                <img  src="{{ movie.poster_path}}"  class="w-4/5 rounded-md" alt="{{ movie.title }} Poster">
+                <div class="movie-status">
+                    <form id="statusForm" action="{% url 'update_status' %}" method="post" class="mt-4">
+                        {% csrf_token %}
+                        <input type="hidden" name="movie_id" value="{{ movie.id }}">
+                        <input type="hidden" name="movieTitle" value="{{ movie.title }}">
+                        <div class="mb-2">
+                            <input type="checkbox" value="watched" id="watchedCheckbox" name="statusCheckbox" {% if movie in user_tracking.watched_movies.all %}checked{% endif %}>
+                            <label for="watchedCheckbox" class="ml-1">Watched</label>
+                        </div>
+                        <div class="mb-2">
+                            <input type="checkbox" value="favorite" id="favoriteCheckbox" name="statusCheckbox" {% if movie in user_tracking.favorite_movies.all %}checked{% endif %}>
+                            <label for="favoriteCheckbox" class="ml-1">Favorite</label>
+                        </div>
+                        <button type="submit" id="updateStatusButton" class="hidden">Update Status</button>
+                    </form>
+                </div>
+            </div>
+            <div class="w-2/3 ">
+                <div class="movie-status">
+                    <div class="movie-data">
+                        <h2 class="text-5xl mb-2 font-bold py-4">{{ movie.title }}</h2>
+                        <p class="text-xl mb-1"><b>Movie id:</b> {{ movie.id }}</p>
+                        <p class="text-xl mb-1"><b>Genres:</b> {{ movie.genres }}</p>
+                        <p class="text-xl mb-1"><b>Language:</b> {{ movie.language }}</p>
+                        <p class="text-xl mb-1"><b>Year:</b> {{ movie.year }}</p>
+                        <p class="text-xl mb-1"><b>Cast:</b> {{ movie.cast }}</p>
+                        <p class="text-xl mb-1"><b>Director:</b> {{ movie.director }}</p>
+
+                        <p class="text-xl mb-2"><b>Overview: <br></b> {{ movie.overview }}</p>
+                    </div>
+                </div>
+                
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="movie-recommendations w-full bg-white bg-opacity-20 backdrop-blur-md shadow-md p-4">
+            {% if recommended_movies %}
+                <h2 class="text-3xl">You may also like</h2>
+                <div class="swiper-container" style="height: fit-content; width: 100%;">
+                    <div class="swiper-wrapper" style="height: fit-content; width: 100%;">
+                        {% for movie in recommended_movies %}
+                            <div class="swiper-slide pt-1"  style="width: 15rem; height: max-content;">
+                                <a href="{% url 'moviesearch' %}?movie_id={{ movie.id }}">
+                                    <img src="{{ movie.poster_path }}"  alt="{{ movie.title }}" class="rounded my-2" >
+                                    <p class="text-lg text-center">{{ movie.title }}</p>
+                                </a>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <script>
+        var swiper = new Swiper('.swiper-container', {
+            slidesPerView: 5,
+            spaceBetween: 20,
+            navigation: {
+                nextEl: '.swiper-button-next',
+                prevEl: '.swiper-button-prev',
+            },
+        });
+
+        const watchedCheckbox = document.getElementById('watchedCheckbox');
+const favoriteCheckbox = document.getElementById('favoriteCheckbox');
+const updateStatusButton = document.getElementById('updateStatusButton');
+
+watchedCheckbox.addEventListener('change', () => {
+    updateStatusButton.click();
+});
+
+favoriteCheckbox.addEventListener('change', () => {
+    updateStatusButton.click();
+});
+
+updateStatusButton.addEventListener('click', (event) => {
+    event.preventDefault();
+    const form = document.getElementById('statusForm');
+    const formData = new FormData(form);
+
+    const statusCheckbox = document.getElementsByName('statusCheckbox');
+    const statuses = [];
+    for (let i = 0; i < statusCheckbox.length; i++) {
+        statuses.push(statusCheckbox[i].value);
+    }
+
+    if (statuses.includes('watched')) {
+        formData.append('watched', 'watched');
+    } else {
+        formData.append('watched', 'unwatched');
+    }
+
+    if (statuses.includes('favorite')) {
+        formData.append('favorite', 'favorite');
+    } else {
+        formData.append('favorite', 'unfavorite');
+    }
+
+    fetch('{% url "update_status" %}', {
+        method: 'POST',
+        body: formData,
+    })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data);
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+});
+    </script>
+
+    {% endblock %}
